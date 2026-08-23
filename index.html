@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nextflows — Personal Expense Tracker MCP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0e1a17;
+    --ink-2:#132420;
+    --paper:#f3ecd8;
+    --paper-2:#eae0c4;
+    --brass:#a9843f;
+    --brass-light:#c9a35f;
+    --approve:#2f6b4f;
+    --approve-dim:#e4ede7;
+    --reject:#8a3a2f;
+    --reject-dim:#f2e3df;
+    --text-on-ink:#e9e4d3;
+    --text-on-ink-dim:#a9b3ac;
+    --text-on-paper:#1c1712;
+    --rule: rgba(169,132,63,0.35);
+    --radius: 3px;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    background: var(--ink);
+    color: var(--text-on-ink);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  a{ color: inherit; }
+
+  .display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  :focus-visible{
+    outline: 2px solid var(--brass-light);
+    outline-offset: 3px;
+  }
+
+  /* ---------- Ledger spine ---------- */
+  .page{
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 28px;
+    position: relative;
+  }
+
+  .spine{
+    position: fixed;
+    top:0; bottom:0; left: calc(50% - 520px);
+    width: 1px;
+    background: repeating-linear-gradient(
+      to bottom, var(--rule) 0 6px, transparent 6px 14px
+    );
+    display: none;
+  }
+  @media (min-width: 1100px){ .spine{ display:block; } }
+
+  /* ---------- Top bar ---------- */
+  header.top{
+    padding: 22px 0 0;
+  }
+  .top-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .brand{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand .dot{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--approve);
+    box-shadow: 0 0 0 3px var(--approve-dim);
+    display:inline-block;
+  }
+  .top-links{
+    display:flex; gap:26px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-on-ink-dim);
+  }
+  .top-links a{ text-decoration:none; transition: color .15s; }
+  .top-links a:hover{ color: var(--brass-light); }
+
+  /* ---------- Hero ---------- */
+  .hero{ padding: 84px 0 70px; }
+  .ledger-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    color: var(--brass-light);
+    text-transform: uppercase;
+    display:flex; align-items:center; gap: 12px;
+    margin-bottom: 26px;
+  }
+  .ledger-tag::before{
+    content:"";
+    width: 34px; height:1px; background: var(--brass);
+  }
+  h1.hero-title{
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 600;
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+    max-width: 15ch;
+  }
+  h1.hero-title em{
+    font-style: italic;
+    color: var(--brass-light);
+  }
+  .hero-sub{
+    margin-top: 22px;
+    max-width: 52ch;
+    font-size: 17px;
+    color: var(--text-on-ink-dim);
+  }
+  .hero-actions{
+    margin-top: 36px;
+    display:flex; gap: 14px; flex-wrap: wrap;
+  }
+  .btn{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    padding: 13px 22px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    display:inline-flex; align-items:center; gap:8px;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn-primary{
+    background: var(--brass);
+    color: var(--ink);
+    border: 1px solid var(--brass);
+  }
+  .btn-primary:hover{ background: var(--brass-light); transform: translateY(-1px); }
+  .btn-ghost{
+    background: transparent;
+    color: var(--text-on-ink);
+    border: 1px solid var(--rule);
+  }
+  .btn-ghost:hover{ border-color: var(--brass-light); color: var(--brass-light); }
+
+  /* ---------- Section shell ---------- */
+  section{ padding: 64px 0; border-top: 1px solid var(--rule); }
+  .sec-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap: 20px; margin-bottom: 40px; flex-wrap: wrap;
+  }
+  .sec-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--brass-light);
+  }
+  h2.sec-title{
+    font-family:'Fraunces', serif;
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .sec-note{
+    font-size: 14px; color: var(--text-on-ink-dim);
+    max-width: 34ch; text-align: right;
+  }
+
+  /* ---------- Team ---------- */
+  .team-grid{
+    display:grid; grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 780px){ .team-grid{ grid-template-columns: 1fr; } }
+
+  .id-card{
+    background: var(--paper);
+    color: var(--text-on-paper);
+    border-radius: var(--radius);
+    padding: 26px 24px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .id-card::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height: 5px;
+    background: var(--brass);
+  }
+  .id-index{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; color: var(--brass);
+    letter-spacing: .08em;
+  }
+  .id-name{
+    font-family:'Fraunces', serif;
+    font-size: 22px; font-weight: 600;
+    margin-top: 10px;
+  }
+  .id-role{
+    font-size: 13.5px; color: #5b5142;
+    margin-top: 3px;
+  }
+  .id-owns{
+    margin-top: 18px; padding-top: 16px;
+    border-top: 1px dashed rgba(28,23,18,0.2);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--text-on-paper);
+  }
+  .id-owns span{ color:#7a6f5c; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.06em; font-size:10.5px; }
+
+  /* ---------- Results ledger table ---------- */
+  .ledger-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+  }
+  .ledger-table thead th{
+    text-align:left;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-on-ink-dim);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+    font-weight: 500;
+  }
+  .ledger-table td{
+    padding: 15px 10px 15px 0;
+    border-bottom: 1px solid rgba(169,132,63,0.16);
+    vertical-align: middle;
+  }
+  .ledger-table td:first-child, .ledger-table th:first-child{ padding-left: 0; }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:7px;
+    font-size: 12px;
+  }
+  .status-pill::before{
+    content:""; width:6px; height:6px; border-radius:50%;
+    background: var(--approve);
+  }
+  .tally{
+    margin-top: 22px;
+    display:flex; gap: 34px; flex-wrap: wrap;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .tally-item .n{ font-size: 30px; font-family:'Fraunces', serif; color: var(--brass-light); }
+  .tally-item .l{ font-size: 11.5px; letter-spacing:.08em; text-transform:uppercase; color: var(--text-on-ink-dim); margin-top: 4px; }
+
+  .hardening-list{
+    margin-top: 40px;
+    display:grid; grid-template-columns: repeat(2, 1fr);
+    gap: 10px 30px;
+  }
+  @media (max-width: 700px){ .hardening-list{ grid-template-columns: 1fr; } }
+  .hardening-item{
+    display:flex; gap: 12px; align-items: flex-start;
+    font-size: 14px; color: var(--text-on-ink-dim);
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(169,132,63,0.14);
+  }
+  .hardening-item .check{
+    color: var(--approve-dim);
+    background: var(--approve);
+    width: 16px; height:16px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 10px; flex-shrink:0; margin-top: 2px;
+  }
+
+  /* ---------- Phone mockup ---------- */
+  .phone-wrap{
+    display:flex; gap: 56px; align-items:center;
+    flex-wrap: wrap;
+  }
+  .phone{
+    width: 280px; height: 572px;
+    background: #0a1310;
+    border-radius: 34px;
+    border: 1px solid rgba(169,132,63,0.4);
+    padding: 14px;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.6);
+  }
+  .phone-notch{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    width:90px; height:20px; background:#0a1310; border-radius: 0 0 14px 14px;
+    z-index: 2;
+  }
+  .phone-screen{
+    background: var(--paper);
+    height:100%; border-radius: 22px;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    color: var(--text-on-paper);
+  }
+  .phone-bar{
+    background: var(--ink-2);
+    color: var(--text-on-ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 26px 16px 12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .phone-bar .dot{ width:6px; height:6px; border-radius:50%; background: var(--approve); }
+  .phone-body{ padding: 16px; display:flex; flex-direction:column; gap: 12px; flex:1; overflow-y:auto; }
+  .bubble{
+    max-width: 84%;
+    padding: 10px 13px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.42;
+  }
+  .bubble.user{
+    align-self:flex-end;
+    background: var(--ink);
+    color: var(--text-on-ink);
+    border-bottom-right-radius: 3px;
+  }
+  .bubble.assistant{
+    align-self:flex-start;
+    background: #fff;
+    border: 1px solid rgba(28,23,18,0.1);
+    border-bottom-left-radius: 3px;
+  }
+  .bubble.tool{
+    align-self:flex-start;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    background: var(--paper-2);
+    border: 1px dashed var(--brass);
+    color: #5b5142;
+  }
+
+  .phone-copy{ max-width: 380px; }
+  .phone-copy p{ color: var(--text-on-ink-dim); margin-top: 14px; font-size: 15px; }
+
+  /* ---------- Tools / receipts ---------- */
+  .tool-tabs{
+    display:flex; gap: 8px; margin-bottom: 26px; flex-wrap: wrap;
+  }
+  .tool-tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--text-on-ink-dim);
+    border-radius: var(--radius);
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  .tool-tab[aria-selected="true"]{
+    background: var(--brass);
+    color: var(--ink);
+    border-color: var(--brass);
+  }
+  .tool-tab:hover:not([aria-selected="true"]){ border-color: var(--brass-light); color: var(--brass-light); }
+
+  .receipt-shell{
+    background: var(--paper);
+    color: var(--text-on-paper);
+    border-radius: var(--radius);
+    padding: 30px 30px 26px;
+    position: relative;
+  }
+  .receipt-top{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap: 20px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .receipt-title{ font-family:'Fraunces', serif; font-size: 20px; font-weight:600; }
+  .receipt-desc{ font-size: 13px; color:#5b5142; margin-top:4px; max-width: 46ch; }
+
+  .verdict-toggle{ display:flex; gap:6px; }
+  .verdict-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11.5px; letter-spacing:.04em; text-transform:uppercase;
+    padding: 8px 13px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(28,23,18,0.18);
+    background: transparent;
+    color: #5b5142;
+    cursor:pointer;
+  }
+  .verdict-btn[aria-pressed="true"].v-approve{ background: var(--approve); border-color: var(--approve); color:#fff; }
+  .verdict-btn[aria-pressed="true"].v-reject{ background: var(--reject); border-color: var(--reject); color:#fff; }
+
+  .receipt-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    margin-top: 16px;
+  }
+  @media (max-width: 720px){ .receipt-grid{ grid-template-columns: 1fr; } }
+
+  .code-block{
+    background: #14100a;
+    color: #d9d2bd;
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code-label{
+    font-size: 10.5px; letter-spacing:.08em; text-transform:uppercase;
+    color: #8a8168; margin-bottom: 10px;
+    display:block;
+  }
+  .code-block .k{ color:#c9a35f; }
+  .code-block .s{ color:#9dbfae; }
+  .code-block .num{ color:#e3b98a; }
+
+  .receipt-shell{ position: relative; padding-bottom: 56px; }
+  .stamp{
+    position:absolute; bottom: 22px; right: 32px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    padding: 9px 18px;
+    border: 3px double currentColor;
+    border-radius: 4px;
+    transform: rotate(-7deg);
+    text-transform: uppercase;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  .stamp.approve{ color: var(--approve); }
+  .stamp.reject{ color: var(--reject); }
+  @media (max-width: 560px){ .stamp{ position: static; transform: rotate(0); display:inline-block; margin-top: 16px; mix-blend-mode: normal; } .receipt-shell{ padding-bottom: 30px; } }
+
+  /* ---------- Run locally ---------- */
+  .terminal{
+    background: #0b0f0d;
+    border: 1px solid rgba(169,132,63,0.3);
+    border-radius: var(--radius);
+    overflow:hidden;
+  }
+  .terminal-head{
+    display:flex; gap:7px; padding: 12px 16px;
+    border-bottom: 1px solid rgba(169,132,63,0.2);
+  }
+  .terminal-head span{ width:9px; height:9px; border-radius:50%; background:#3a352a; }
+  .terminal-body{
+    padding: 22px 24px 26px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    line-height: 2;
+    color: #cfd8d0;
+  }
+  .terminal-body .cmt{ color: #6d7a70; }
+  .terminal-body .pr{ color: var(--brass-light); }
+
+  .run-note{
+    margin-top: 22px; font-size: 14px; color: var(--text-on-ink-dim); max-width: 56ch;
+  }
+
+  /* ---------- Footer ---------- */
+  footer{
+    padding: 46px 0 60px;
+    border-top: 1px solid var(--rule);
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap: wrap; gap: 16px;
+  }
+  footer .fbrand{ font-family:'Fraunces', serif; font-size:15px; }
+  footer .flinks{ display:flex; gap: 22px; font-size: 13px; color: var(--text-on-ink-dim); }
+  footer .flinks a{ text-decoration:none; }
+  footer .flinks a:hover{ color: var(--brass-light); }
+</style>
+</head>
+<body>
+
+<div class="spine"></div>
+
+<div class="page">
+
+  <header class="top">
+    <div class="top-row">
+      <div class="brand"><span class="dot"></span> nextflows</div>
+      <nav class="top-links">
+        <a href="#team">Team</a>
+        <a href="#results">Results</a>
+        <a href="#mobile">On your phone</a>
+        <a href="#tools">The tools</a>
+        <a href="#run">Run locally</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero" style="border-top:none; padding-top:70px;">
+    <div class="ledger-tag">Ledger No. 004 — Shipped Aug 2026</div>
+    <h1 class="hero-title">Personal Expense Tracker, <em>hardened</em> and MCP‑ready.</h1>
+    <p class="hero-sub">
+      A local MCP server that lets an AI assistant log, list, and summarize expenses
+      through plain conversation — built, peer‑reviewed, and stress‑tested by a
+      three‑person cohort team over six weeks.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/MohammadYousef-001/Personal-Expenses-Tracker" target="_blank" rel="noopener">View source repo →</a>
+      <a class="btn btn-ghost" href="#tools">See the tools in action</a>
+    </div>
+  </section>
+
+  <section id="team">
+    <div class="sec-head">
+      <div>
+        <div class="sec-eyebrow">01 — Roster</div>
+        <h2 class="sec-title">Three tools, three owners.</h2>
+      </div>
+      <div class="sec-note">Each teammate built and hardened one P0 tool, then had it peer‑reviewed before it shipped.</div>
+    </div>
+
+    <div class="team-grid">
+      <div class="id-card">
+        <div class="id-index">MEMBER — 01</div>
+        <div class="id-name">Baraa Mohsen</div>
+        <div class="id-role">list_expenses — filtering &amp; response limits</div>
+        <div class="id-owns">
+          <span>Hardening focus</span>
+          Byte cap, default limit 4, stricter month validation
+        </div>
+      </div>
+      <div class="id-card">
+        <div class="id-index">MEMBER — 02</div>
+        <div class="id-name">Mohammad Yousef</div>
+        <div class="id-role">add_expense — validation &amp; storage</div>
+        <div class="id-owns">
+          <span>Hardening focus</span>
+          Real calendar dates, category normalization, append‑only writes
+        </div>
+      </div>
+      <div class="id-card">
+        <div class="id-index">MEMBER — 03</div>
+        <div class="id-name">Rafeef Sholy</div>
+        <div class="id-role">get_spending_summary — totals &amp; reporting</div>
+        <div class="id-owns">
+          <span>Hardening focus</span>
+          Fixed data source, error handling, output consistency
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="results">
+    <div class="sec-head">
+      <div>
+        <div class="sec-eyebrow">02 — The Ledger</div>
+        <h2 class="sec-title">Every tool, tested by hand.</h2>
+      </div>
+      <div class="sec-note">Thirteen manual test cases, run through MCP Inspector before anything shipped.</div>
+    </div>
+
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th>Owner</th>
+          <th>P0 cases</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>add_expense</td>
+          <td>Mohammad Yousef</td>
+          <td>4 / 4 passed</td>
+          <td><span class="status-pill">Shipped</span></td>
+        </tr>
+        <tr>
+          <td>list_expenses</td>
+          <td>Baraa Mohsen</td>
+          <td>5 / 5 passed</td>
+          <td><span class="status-pill">Shipped</span></td>
+        </tr>
+        <tr>
+          <td>get_spending_summary</td>
+          <td>Rafeef Sholy</td>
+          <td>4 / 4 passed</td>
+          <td><span class="status-pill">Shipped</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tally">
+      <div class="tally-item"><div class="n">13</div><div class="l">Test cases run</div></div>
+      <div class="tally-item"><div class="n">0</div><div class="l">Known open bugs</div></div>
+      <div class="tally-item"><div class="n">v1.0.0</div><div class="l">Tagged release</div></div>
+    </div>
+
+    <div class="hardening-list">
+      <div class="hardening-item"><span class="check">✓</span> Real calendar‑date validation, not just format matching</div>
+      <div class="hardening-item"><span class="check">✓</span> Categories normalized to lowercase before storage</div>
+      <div class="hardening-item"><span class="check">✓</span> Append‑only CSV writes instead of full rewrites</div>
+      <div class="hardening-item"><span class="check">✓</span> Expense IDs generated with randomUUID</div>
+      <div class="hardening-item"><span class="check">✓</span> 64&nbsp;KB byte cap on list_expenses responses</div>
+      <div class="hardening-item"><span class="check">✓</span> Default result limit reduced from all rows to 4</div>
+      <div class="hardening-item"><span class="check">✓</span> Month values strictly checked against 01–12</div>
+      <div class="hardening-item"><span class="check">✓</span> Fixed, hardcoded CSV path — no user‑supplied paths</div>
+    </div>
+  </section>
+
+  <section id="mobile">
+    <div class="sec-head">
+      <div>
+        <div class="sec-eyebrow">03 — On your phone</div>
+        <h2 class="sec-title">Same tools, plain conversation.</h2>
+      </div>
+      <div class="sec-note">A preview of what a Claude conversation with these tools looks like on mobile.</div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-bar"><span class="dot"></span> Personal Expense Tracker</div>
+          <div class="phone-body">
+            <div class="bubble user">I spent 25 on groceries today for milk and bread, add it to my expenses</div>
+            <div class="bubble tool">→ add_expense({ amount: 25, category: "groceries", date: "2026-08-16" })</div>
+            <div class="bubble assistant">Done — I added your $25 groceries expense for milk and bread.</div>
+            <div class="bubble user">how much did I spend this month?</div>
+            <div class="bubble tool">→ get_spending_summary({ month: "2026-08" })</div>
+            <div class="bubble assistant">You spent $240 this month across 8 expenses — groceries was the biggest category.</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-copy">
+        <div class="sec-eyebrow">Mockup, not a live call</div>
+        <h3 class="display" style="font-size:22px; margin-top:10px; font-weight:600;">No app to install.</h3>
+        <p>The server runs locally over stdio and connects straight into Claude Desktop. There's no separate mobile app — the interface is whatever chat client you already use.</p>
+        <p>This screen is a static mockup of that conversation, built from the project's own example transcripts.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="tools">
+    <div class="sec-head">
+      <div>
+        <div class="sec-eyebrow">04 — The Tools</div>
+        <h2 class="sec-title">Approved or rejected — nothing in between.</h2>
+      </div>
+      <div class="sec-note">Toggle a tool's verdict to see the exact request and response, straight from the schema.</div>
+    </div>
+
+    <div class="tool-tabs" role="tablist" aria-label="Choose a tool">
+      <button class="tool-tab" role="tab" aria-selected="true" data-tool="add_expense">add_expense</button>
+      <button class="tool-tab" role="tab" aria-selected="false" data-tool="list_expenses">list_expenses</button>
+      <button class="tool-tab" role="tab" aria-selected="false" data-tool="get_spending_summary">get_spending_summary</button>
+    </div>
+
+    <div class="receipt-shell">
+      <div class="stamp approve" id="stamp">Approved</div>
+      <div class="receipt-top">
+        <div>
+          <div class="receipt-title" id="receipt-title">add_expense</div>
+          <div class="receipt-desc" id="receipt-desc">Adds a new expense to the CSV file after validating amount, category, date, and description.</div>
+        </div>
+        <div class="verdict-toggle">
+          <button class="verdict-btn v-approve" aria-pressed="true" data-verdict="approve">Approved</button>
+          <button class="verdict-btn v-reject" aria-pressed="false" data-verdict="reject">Rejected</button>
+        </div>
+      </div>
+
+      <div class="receipt-grid">
+        <div class="code-block">
+          <span class="code-label">Request</span>
+          <pre id="req-block"></pre>
+        </div>
+        <div class="code-block">
+          <span class="code-label">Response</span>
+          <pre id="res-block"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <div class="sec-head">
+      <div>
+        <div class="sec-eyebrow">05 — Run it yourself</div>
+        <h2 class="sec-title">Local by design.</h2>
+      </div>
+      <div class="sec-note">No cloud, no login. Clone, install, and it's yours.</div>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-head"><span></span><span></span><span></span></div>
+      <div class="terminal-body">
+<span class="cmt"># clone the project</span><br>
+<span class="pr">$</span> git clone https://github.com/MohammadYousef-001/Personal-Expenses-Tracker.git<br>
+<span class="pr">$</span> cd Personal-Expenses-Tracker<br>
+<span class="pr">$</span> npm install<br>
+<br>
+<span class="cmt"># run the MCP server locally over stdio</span><br>
+<span class="pr">$</span> npm run dev<br>
+<br>
+<span class="cmt"># or open MCP Inspector to test tools by hand</span><br>
+<span class="pr">$</span> npm run inspect
+      </div>
+    </div>
+    <p class="run-note">This showcase page is fully static — clone this repo and open <span class="mono">index.html</span> directly, or serve it with <span class="mono">npx serve .</span>. It doesn't call the live server; the tool card above shows real fixture data captured during testing.</p>
+  </section>
+
+  <footer>
+    <div class="fbrand">nextflows</div>
+    <div class="flinks">
+      <a href="https://github.com/MohammadYousef-001/Personal-Expenses-Tracker" target="_blank" rel="noopener">Source repo</a>
+      <a href="#team">Team</a>
+      <a href="#run">Run locally</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  const TOOLS = {
+    add_expense: {
+      desc: "Adds a new expense to the CSV file after validating amount, category, date, and description.",
+      approve: {
+        req: `{
+  "amount": <span class="num">25</span>,
+  "category": <span class="s">"groceries"</span>,
+  "date": <span class="s">"2026-08-12"</span>,
+  "description": <span class="s">"milk and bread"</span>
+}`,
+        res: `{
+  "success": <span class="k">true</span>,
+  "expense": {
+    "id": <span class="s">"a1c9-...-e662"</span>,
+    "amount": <span class="num">25</span>,
+    "category": <span class="s">"groceries"</span>,
+    "date": <span class="s">"2026-08-12"</span>,
+    "description": <span class="s">"milk and bread"</span>
+  }
+}`
+      },
+      reject: {
+        req: `{
+  "amount": <span class="num">25</span>,
+  "category": <span class="s">"groceries"</span>,
+  "date": <span class="s">"2026-99-99"</span>
+}`,
+        res: `{
+  "error": <span class="s">"Input validation error:
+  date: Date must be a valid
+  calendar date"</span>
+}`
+      }
+    },
+    list_expenses: {
+      desc: "Lists saved expenses with optional month and category filters, capped at 4 results by default.",
+      approve: {
+        req: `{
+  "month": <span class="s">"2026-08"</span>,
+  "category": <span class="s">"groceries"</span>
+}`,
+        res: `{
+  "expenses": [
+    {
+      "id": <span class="s">"expense-001"</span>,
+      "amount": <span class="num">45</span>,
+      "category": <span class="s">"groceries"</span>,
+      "date": <span class="s">"2026-08-01"</span>
+    }
+  ],
+  "count": <span class="num">1</span>,
+  "message": <span class="s">"matching expenses found"</span>
+}`
+      },
+      reject: {
+        req: `{
+  "month": <span class="s">"2026-99"</span>
+}`,
+        res: `{
+  "error": <span class="s">"Input validation error:
+  month: Month must use
+  YYYY-MM format, 01-12"</span>
+}`
+      }
+    },
+    get_spending_summary: {
+      desc: "Calculates total spending, expense count, and category breakdown for a given month.",
+      approve: {
+        req: `{
+  "month": <span class="s">"2026-08"</span>
+}`,
+        res: `{
+  "month": <span class="s">"2026-08"</span>,
+  "totalAmount": <span class="num">165</span>,
+  "expenseCount": <span class="num">3</span>,
+  "categoryTotals": {
+    "Food": <span class="num">45</span>,
+    "Transport": <span class="num">20</span>,
+    "Bills": <span class="num">100</span>
+  }
+}`
+      },
+      reject: {
+        req: `{
+  "month": <span class="s">"13/2026"</span>
+}`,
+        res: `{
+  "error": <span class="s">"Input validation error:
+  month must use YYYY-MM
+  format"</span>
+}`
+      }
+    }
+  };
+
+  let currentTool = 'add_expense';
+  let currentVerdict = 'approve';
+
+  const tabs = document.querySelectorAll('.tool-tab');
+  const verdictBtns = document.querySelectorAll('.verdict-btn');
+  const titleEl = document.getElementById('receipt-title');
+  const descEl = document.getElementById('receipt-desc');
+  const reqEl = document.getElementById('req-block');
+  const resEl = document.getElementById('res-block');
+  const stampEl = document.getElementById('stamp');
+
+  function render(){
+    const tool = TOOLS[currentTool];
+    const data = tool[currentVerdict];
+    titleEl.textContent = currentTool;
+    descEl.textContent = tool.desc;
+    reqEl.innerHTML = data.req;
+    resEl.innerHTML = data.res;
+
+    stampEl.style.display = 'inline-block';
+    stampEl.textContent = currentVerdict === 'approve' ? 'Approved' : 'Rejected';
+    stampEl.className = 'stamp ' + (currentVerdict === 'approve' ? 'approve' : 'reject');
+
+    tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tool === currentTool ? 'true' : 'false'));
+    verdictBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.verdict === currentVerdict ? 'true' : 'false'));
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => { currentTool = t.dataset.tool; render(); }));
+  verdictBtns.forEach(b => b.addEventListener('click', () => { currentVerdict = b.dataset.verdict; render(); }));
+
+  render();
+</script>
+
+</body>
+</html>
